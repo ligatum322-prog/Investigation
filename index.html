@@ -3,246 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OS/84</title>
+    <title>FNAF Clone - Sobreviva até as 6 AM</title>
     <style>
-        /* ================= CSS (ESTILO E CORES) ================= */
         body {
-            background-color: black;
-            color: white;
-            font-family: 'Courier New', Courier, monospace;
             margin: 0;
-            padding: 20px;
-            overflow: hidden;
-            user-select: none; /* Impede de selecionar o texto */
-            cursor: crosshair; /* Cursor retrô */
-        }
-
-        /* Telas (Estados) */
-        #tela-boot, #tela-desktop, #tela-cmd, #tela-jumpscare {
-            display: none;
-            width: 100%;
-            height: 100vh;
-        }
-
-        /* Cursor piscando do DOS */
-        .cursor-pisca {
-            display: inline-block;
-            width: 10px;
-            height: 1em;
-            background-color: white;
-            animation: piscar 1s step-end infinite;
-            vertical-align: bottom;
-        }
-
-        @keyframes piscar {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0; }
-        }
-
-        /* Estilo do Ícone na Área de Trabalho */
-        .icone-container {
-            position: absolute;
-            top: 50px;
-            left: 50px;
-            width: 80px;
-            text-align: center;
-            cursor: pointer;
-        }
-
-        .icone {
-            width: 60px;
-            height: 40px;
-            border: 2px solid white;
-            margin: 0 auto 10px auto;
-            position: relative;
+            background-color: #000;
+            color: #fff;
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-weight: bold;
-            transition: all 0s; /* Sem suavidade, bem anos 80 */
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
         }
 
-        .icone::before {
-            content: "";
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 600px;
+            background-color: #1a1a1a;
+            border: 2px solid #333;
+            overflow: hidden;
+            background-image: radial-gradient(circle, #333 10%, #000 80%);
+        }
+
+        /* Interface (HUD) */
+        #hud {
             position: absolute;
-            top: 5px;
+            top: 10px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 10;
+        }
+
+        #power-meter { color: #4caf50; }
+        #clock { color: #fff; }
+
+        /* A Sala / Porta */
+        #door-frame {
+            position: absolute;
+            left: 50px;
+            top: 150px;
+            width: 150px;
+            height: 400px;
+            background-color: #0d0d0d;
+            border: 5px solid #444;
+        }
+
+        #door {
+            position: absolute;
+            top: 0;
             left: 0;
             width: 100%;
-            height: 2px;
-            background-color: white;
+            height: 0%; /* 100% quando fechada */
+            background-color: #555;
+            background-image: repeating-linear-gradient(0deg, transparent, transparent 20px, #333 20px, #333 40px);
+            transition: height 0.3s ease;
         }
 
-        /* Inverte as cores ao passar o mouse (Hover) */
-        .icone-container:hover .icone {
-            background-color: white;
-            color: black;
-        }
-
-        /* Estilo da tela de erro (CMD) */
-        #tela-cmd {
-            background-color: #aa0000; /* Vermelho escuro clássico de erro */
+        /* Botão da Porta */
+        #door-btn {
+            position: absolute;
+            left: 220px;
+            top: 300px;
+            padding: 15px 20px;
+            font-size: 16px;
+            background-color: #d32f2f;
             color: white;
-            padding: 20px;
-            box-sizing: border-box;
-            font-size: 1.2rem;
-            white-space: pre-wrap;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
         }
+        #door-btn.closed { background-color: #388e3c; }
 
-        /* Jumpscare Final */
-        #tela-jumpscare {
+        /* O Animatronic (Inimigo) */
+        #animatronic {
+            position: absolute;
+            left: 80px;
+            top: 300px;
+            width: 90px;
+            height: 150px;
             background-color: red;
-            color: white;
+            border-radius: 45px 45px 0 0;
+            opacity: 0;
+            transition: opacity 0.5s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+        }
+
+        /* Telas de Fim de Jogo */
+        #overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
             display: none;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            font-size: 4rem;
-            font-weight: bold;
-            text-align: center;
-            animation: tremor 0.1s infinite;
+            align-items: center;
+            z-index: 100;
         }
 
-        @keyframes tremor {
-            0% { transform: translate(2px, 1px) rotate(0deg); }
-            10% { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            30% { transform: translate(0px, 2px) rotate(0deg); }
-            40% { transform: translate(1px, -1px) rotate(1deg); }
-            50% { transform: translate(-1px, 2px) rotate(-1deg); }
-            60% { transform: translate(-3px, 1px) rotate(0deg); }
-            70% { transform: translate(2px, 1px) rotate(-1deg); }
-            80% { transform: translate(-1px, -1px) rotate(1deg); }
-            90% { transform: translate(2px, 2px) rotate(0deg); }
-            100% { transform: translate(1px, -2px) rotate(-1deg); }
-        }
+        #overlay h1 { font-size: 60px; margin: 0; }
+        #overlay p { font-size: 20px; }
+        .jumpscare { background-color: red !important; }
     </style>
 </head>
 <body>
 
-    <div id="tela-boot">
-        <div id="boot-texto"></div>
-        <div class="cursor-pisca"></div>
-    </div>
+    <div id="game-container">
+        <div id="hud">
+            <div id="power-meter">Energia: <span id="power">100</span>%</div>
+            <div id="clock"><span id="time">12</span> AM</div>
+        </div>
 
-    <div id="tela-desktop">
-        <div>A:\> DESKTOP</div>
-        <div class="icone-container" onclick="ativarVirus()">
-            <div class="icone">TXT</div>
-            <div>AVISO.TXT</div>
+        <div id="door-frame">
+            <div id="animatronic">🐻</div>
+            <div id="door"></div>
+        </div>
+
+        <button id="door-btn" onclick="toggleDoor()">FECHAR PORTA</button>
+
+        <div id="overlay">
+            <h1 id="end-title">Game Over</h1>
+            <p id="end-desc">Você não sobreviveu.</p>
+            <button onclick="location.reload()" style="margin-top:20px; padding: 10px; cursor:pointer;">Tentar Novamente</button>
         </div>
     </div>
 
-    <div id="tela-cmd"></div>
-
-    <div id="tela-jumpscare">
-        VOCÊ FOI INFECTADO
-        <div style="font-size: 1.5rem; margin-top: 20px;">O JOGO TE ENCONTROU</div>
-    </div>
-
     <script>
-        /* ================= JAVASCRIPT (LÓGICA E EVENTOS) ================= */
-        
-        // Sequência de Boot
-        const linhasBoot = [
-            "SISTEMA OPERACIONAL OS/84 v1.0",
-            "CHECANDO MEMORIA RAM... 640K OK",
-            "MONTANDO DISCO C:\\...",
-            "INICIANDO INTERFACE GRAFICA..."
-        ];
+        // Variáveis do Jogo
+        let power = 100;
+        let time = 0; // 0 representa 12 AM
+        let isDoorClosed = false;
+        let animatronicStage = 0; // 0 a 4 (0 é longe, 4 é na porta)
+        let gameActive = true;
 
-        let bootIndex = 0;
-        const telaBoot = document.getElementById('tela-boot');
-        const bootTexto = document.getElementById('boot-texto');
-        const telaDesktop = document.getElementById('tela-desktop');
+        // Elementos do DOM
+        const powerEl = document.getElementById('power');
+        const timeEl = document.getElementById('time');
+        const doorEl = document.getElementById('door');
+        const doorBtn = document.getElementById('door-btn');
+        const animatronicEl = document.getElementById('animatronic');
+        const overlay = document.getElementById('overlay');
+        const endTitle = document.getElementById('end-title');
 
-        // Inicia o processo quando a página carrega
-        window.onload = () => {
-            telaBoot.style.display = 'block';
-            mostrarLinhaBoot();
-        };
+        // Loop de Energia (cai a cada segundo)
+        setInterval(() => {
+            if (!gameActive) return;
+            
+            let drainRate = isDoorClosed ? 2 : 0.5; // Porta fechada gasta muita energia
+            power -= drainRate;
 
-        function mostrarLinhaBoot() {
-            if (bootIndex < linhasBoot.length) {
-                bootTexto.innerHTML += linhasBoot[bootIndex] + "<br><br>";
-                bootIndex++;
-                setTimeout(mostrarLinhaBoot, 800); // 800ms por linha
-            } else {
-                setTimeout(() => {
-                    telaBoot.style.display = 'none';
-                    telaDesktop.style.display = 'block';
-                }, 1000);
+            if (power <= 0) {
+                power = 0;
+                powerOutage();
             }
-        }
+            powerEl.innerText = Math.floor(power);
+        }, 1000);
 
-        // Função ativada ao clicar no arquivo
-        let virusAtivado = false;
+        // Loop de Tempo (1 hora a cada 10 segundos para testar rápido)
+        setInterval(() => {
+            if (!gameActive) return;
+            
+            time++;
+            let displayTime = time === 0 ? 12 : time;
+            timeEl.innerText = displayTime;
 
-        function ativarVirus() {
-            if (virusAtivado) return; // Evita duplo clique
-            virusAtivado = true;
+            if (time >= 6) {
+                winGame();
+            }
+        }, 10000); // Mude para 60000 (1 minuto) para um jogo real
 
-            // 1. FORÇA O DOWNLOAD DO ARQUIVO ASSUSTADOR
-            const conteudoArquivo = "Você não deveria ter voltado para casa.\nO JOGO TE ENCONTROU.\nDelete isso NÃO vai ajudar.";
-            const blob = new Blob([conteudoArquivo], { type: 'text/plain' });
-            const linkDownload = document.createElement('a');
-            linkDownload.href = URL.createObjectURL(blob);
-            linkDownload.download = "AVISO_LEIA_AGORA.txt";
-            document.body.appendChild(linkDownload);
-            linkDownload.click();
-            document.body.removeChild(linkDownload);
+        // Loop do Animatronic (IA Básica)
+        setInterval(() => {
+            if (!gameActive || power <= 0) return;
 
-            // 2. MUDA PARA A TELA DE CMD
-            telaDesktop.style.display = 'none';
-            const telaCmd = document.getElementById('tela-cmd');
-            telaCmd.style.display = 'block';
+            // Chance do animatronic avançar
+            if (Math.random() > 0.4) { 
+                animatronicStage++;
+            }
 
-            // 3. ANIMAÇÃO DE DIGITAÇÃO DO CMD
-            const cmdComandos = [
-                "========================================",
-                "       ANTIVIRUS EMERGENCIA CRITICA     ",
-                "========================================",
-                "",
-                "[SCANNING...] 10%... 45%... 100% INFECTADO",
-                "",
-                "VIRUS DETECTADO: 'JOGO_MALDICAO.exe'",
-                "ORIGEM: Seu Desktop",
-                "NIVEL: CRITICO - NAO PODE SER REMOVIDO",
-                "",
-                "[AVISO] O sistema foi comprometido.",
-                "",
-                "REINICIANDO SISTEMA EM 3...",
-                "2...",
-                "1..."
-            ];
-
-            let cmdIndex = 0;
-            function digitarCmd() {
-                if (cmdIndex < cmdComandos.length) {
-                    telaCmd.innerHTML += cmdComandos[cmdIndex] + "<br>";
-                    cmdIndex++;
-                    // Acelera no final
-                    let velocidade = cmdIndex > 10 ? 300 : 700;
-                    setTimeout(digitarCmd, velocidade);
+            // Atualiza o visual
+            if (animatronicStage === 3) {
+                // Aparece na porta
+                animatronicEl.style.opacity = '1';
+            } else if (animatronicStage > 3) {
+                // Tenta atacar
+                if (isDoorClosed) {
+                    // Bateu na porta e volta pro início
+                    animatronicStage = 0;
+                    animatronicEl.style.opacity = '0';
+                    power -= 5; // Perde um pouco de energia pela batida
                 } else {
-                    // Após terminar o CMD, chama o Jumpscare
-                    setTimeout(mostrarJumpscare, 500);
+                    // Jumpscare!
+                    jumpscare();
                 }
             }
-            
-            // Inicia a digitação falsa do CMD
-            digitarCmd();
+        }, 3000); // A cada 3 segundos ele pensa se vai mover
+
+        // Função do botão da porta
+        function toggleDoor() {
+            if (!gameActive || power <= 0) return;
+
+            isDoorClosed = !isDoorClosed;
+            if (isDoorClosed) {
+                doorEl.style.height = '100%';
+                doorBtn.innerText = 'ABRIR PORTA';
+                doorBtn.classList.add('closed');
+            } else {
+                doorEl.style.height = '0%';
+                doorBtn.innerText = 'FECHAR PORTA';
+                doorBtn.classList.remove('closed');
+            }
         }
 
-        // 4. MOSTRA O JUMPSCARE E TRAVA A TELA
-        function mostrarJumpscare() {
-            document.getElementById('tela-cmd').style.display = 'none';
-            const jumpscare = document.getElementById('tela-jumpscare');
-            jumpscare.style.display = 'flex';
+        // Fim de jogo: Acabou a energia
+        function powerOutage() {
+            isDoorClosed = false;
+            doorEl.style.height = '0%';
+            doorBtn.disabled = true;
+            document.getElementById('game-container').style.backgroundImage = 'none';
+            document.getElementById('game-container').style.backgroundColor = '#000';
+            animatronicEl.style.opacity = '0'; // Fica tudo escuro
             
-            // Opcional: Recarrega a página infinitamente após 3 segundos
             setTimeout(() => {
-                location.reload();
-            }, 3000);
+                jumpscare();
+            }, 4000); // Jumpscare no escuro após 4 segundos
+        }
+
+        // Fim de Jogo: Perdeu
+        function jumpscare() {
+            gameActive = false;
+            overlay.style.display = 'flex';
+            overlay.classList.add('jumpscare');
+            endTitle.innerText = "JUMPSCARE!";
+            document.getElementById('end-desc').innerText = "O Animatronic te pegou.";
+        }
+
+        // Fim de Jogo: Venceu
+        function winGame() {
+            gameActive = false;
+            overlay.style.display = 'flex';
+            endTitle.innerText = "6:00 AM";
+            document.getElementById('end-desc').innerText = "Parabéns, você sobreviveu à noite!";
         }
     </script>
 </body>
