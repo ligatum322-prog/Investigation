@@ -3,418 +3,309 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Aetheria TCG - Protótipo</title>
+    <title>Monster Card Pocket V1</title>
     <style>
         :root {
-            --bg-dark: #1a1a2e;
-            --bg-panel: #16213e;
-            --primary: #0f3460;
-            --accent: #e94560;
-            --text: #f1f1f1;
-            --common: #b0bec5;
-            --rare: #42a5f5;
-            --epic: #ab47bc;
-            --legendary: #ffa000;
+            --primary: #2a75d3;
+            --bg: #121212;
+            --surface: #1e1e1e;
+            --text: #ffffff;
+            --accent: #ffcb05;
         }
-
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
-        body { background-color: var(--bg-dark); color: var(--text); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); overflow-x: hidden; }
         
-        /* Telas */
-        #screen-home, #screen-battle { display: flex; flex-direction: column; width: 100%; height: 100%; }
-        #screen-battle { display: none; background: linear-gradient(180deg, #2b1b3d 0%, var(--bg-dark) 100%); }
+        /* Layout Mobile First */
+        #app { display: flex; flex-direction: column; height: 100vh; max-width: 500px; margin: 0 auto; background: var(--surface); border: 1px solid #333;}
         
-        /* Menu Inicial */
-        .home-container { margin: auto; text-align: center; }
-        h1 { font-size: 2.5rem; margin-bottom: 10px; color: var(--accent); }
-        .btn { background-color: var(--accent); color: white; border: none; padding: 15px 30px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; margin: 10px; }
-        .btn:hover { background-color: #ff5c77; transform: scale(1.05); }
-        .btn:disabled { background-color: #555; cursor: not-allowed; transform: none; }
-
-        /* Batalha - Layout */
-        .status-bar { display: flex; justify-content: space-between; padding: 10px 20px; background: rgba(0,0,0,0.5); font-size: 1rem; font-weight: bold; }
-        .arena { flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; }
+        /* Header / Resumo da Conta */
+        header { display: flex; justify-content: space-between; padding: 15px; background: #222; border-bottom: 2px solid #333; }
+        .currency { font-size: 14px; color: var(--accent); font-weight: bold;}
         
-        .zone { display: flex; justify-content: center; gap: 10px; padding: 10px; min-height: 140px; }
-        .zone-field { border-top: 1px dashed rgba(255,255,255,0.1); border-bottom: 1px dashed rgba(255,255,255,0.1); background: rgba(255,255,255,0.02); }
+        /* Telas (Views) */
+        .view { flex: 1; overflow-y: auto; padding: 20px; display: none; }
+        .view.active { display: block; }
         
-        /* Controle de Turno */
-        .turn-controls { display: flex; justify-content: center; align-items: center; padding: 10px; background: rgba(0,0,0,0.8); z-index: 10; }
-        #turn-indicator { margin-right: 20px; font-weight: bold; color: var(--accent); }
-
-        /* Cartas */
-        .card { 
-            width: 80px; height: 110px; background-color: var(--bg-panel); border: 2px solid #555; 
-            border-radius: 6px; position: relative; display: flex; flex-direction: column; 
-            transition: 0.2s; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        }
-        .card:hover { transform: translateY(-5px); border-color: white; }
-        .card.can-play { border-color: #4caf50; box-shadow: 0 0 10px #4caf50; }
-        .card.can-attack { border-color: var(--accent); box-shadow: 0 0 10px var(--accent); }
-        .card.selected { transform: scale(1.1); z-index: 100; border-color: #ffeb3b; }
+        /* Tipografia e Botões */
+        h1, h2, h3 { margin-bottom: 15px; text-align: center; }
+        button { background: var(--primary); color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; text-transform: uppercase;}
+        button:disabled { background: #555; color: #888; cursor: not-allowed; }
+        button.secondary { background: #444; }
         
-        .card-cost { position: absolute; top: -5px; left: -5px; background: #00bcd4; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem; border: 2px solid #000;}
-        .card-name { font-size: 0.55rem; text-align: center; padding: 5px 2px; background: rgba(0,0,0,0.6); margin-top: 15px; font-weight: bold; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
-        .card-img { flex: 1; background: #333; margin: 2px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; }
-        .card-stats { display: flex; justify-content: space-between; padding: 2px; position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); }
-        .stat-atk { color: #ff5252; font-weight: bold; font-size: 0.9rem; padding-left: 5px; }
-        .stat-hp { color: #69f0ae; font-weight: bold; font-size: 0.9rem; padding-right: 5px; }
+        /* Pack Opening Area */
+        .pack-area { text-align: center; margin-top: 20px; padding: 20px; background: #2a2a2a; border-radius: 12px;}
+        .timer { font-size: 24px; font-family: monospace; color: var(--accent); margin: 10px 0;}
         
-        /* Raridades */
-        .rarity-common { border-bottom: 3px solid var(--common); }
-        .rarity-rare { border-bottom: 3px solid var(--rare); }
-        .rarity-epic { border-bottom: 3px solid var(--epic); }
-        .rarity-legendary { border-bottom: 3px solid var(--legendary); }
-
-        /* Alvos e Mensagens */
-        .targetable { border-color: #ffeb3b !important; cursor: crosshair; animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 5px #ffeb3b; } 50% { box-shadow: 0 0 15px #ffeb3b; } 100% { box-shadow: 0 0 5px #ffeb3b; } }
+        /* Grid de Cartas (Coleção) */
+        .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+        .card { background: #333; border: 2px solid #555; border-radius: 8px; padding: 10px; text-align: center; font-size: 12px; aspect-ratio: 2.5/3.5; display: flex; flex-direction: column; justify-content: space-between;}
+        .card.Raro { border-color: silver; }
+        .card.EX { border-color: gold; box-shadow: 0 0 10px gold; font-weight: bold;}
+        .card-name { font-weight: bold; font-size: 14px;}
+        .card-stats { color: #aaa; }
         
-        #message-overlay { position: fixed; top: 40%; left: 0; width: 100%; text-align: center; pointer-events: none; z-index: 1000; }
-        #message-text { display: inline-block; background: rgba(0,0,0,0.8); color: white; padding: 15px 30px; border-radius: 10px; font-size: 1.5rem; font-weight: bold; opacity: 0; transition: opacity 0.3s; border: 2px solid var(--accent); }
-
-        .player-avatar { cursor: pointer; padding: 10px; border: 2px solid transparent; border-radius: 8px; }
-        .player-avatar.targetable { border-color: #ffeb3b; background: rgba(255, 235, 59, 0.2); }
+        /* Menu Inferior (Navegação) */
+        nav { display: flex; justify-content: space-around; background: #000; padding: 15px 0; border-top: 2px solid #333;}
+        nav div { cursor: pointer; font-size: 12px; text-align: center; flex: 1; color: #aaa;}
+        nav div.active { color: var(--primary); font-weight: bold;}
         
-        /* Responsividade básica para caber cartas */
-        @media (min-width: 768px) { .card { width: 100px; height: 140px; } .card-name { font-size: 0.7rem; } }
+        /* Battle Field Layout Clássico */
+        .battle-field { border: 1px solid #444; height: 300px; position: relative; background: #1a1a1a; margin-top: 20px;}
+        .active-spot { position: absolute; top: 20%; left: 50%; transform: translateX(-50%); width: 60px; height: 80px; border: 2px dashed #666; display: flex; align-items: center; justify-content: center; font-size: 10px; text-align: center;}
+        .bench { position: absolute; bottom: 10px; left: 10px; right: 10px; display: flex; justify-content: space-around;}
+        .bench-spot { width: 50px; height: 70px; border: 2px dashed #444; font-size: 10px; display: flex; align-items: center; justify-content: center; text-align: center;}
     </style>
 </head>
 <body>
 
-    <div id="screen-home">
-        <div class="home-container">
-            <h1>AETHERIA CLASH</h1>
-            <p style="margin-bottom: 30px; color: #aaa;">Protótipo TCG - MVP Local</p>
-            <button class="btn" onclick="startGame()">Jogar (Vs IA)</button>
-            <button class="btn" onclick="alert('Coleção e Construtor de Deck indisponíveis no protótipo de 1 arquivo. O deck é gerado aleatoriamente!')">Coleção</button>
+<div id="app">
+    <header>
+        <div>Level: <span id="player-level">1</span></div>
+        <div class="currency">Pack Points: <span id="pack-points">0</span></div>
+    </header>
+
+    <div id="view-home" class="view active">
+        <h2>Bem-vindo ao Monster Pocket</h2>
+        
+        <div class="pack-area">
+            <h3>Pacote Diário (Genetic Origin)</h3>
+            <p>1 de 2 pacotes grátis disponíveis hoje.</p>
+            <div class="timer" id="pack-timer">00:00:00</div>
+            <button id="btn-open-pack" onclick="openPack()">Abrir Pacote (5 Cartas)</button>
+            <button class="secondary" onclick="useHourglass()">Usar Hourglass (-1h)</button>
+        </div>
+
+        <div class="pack-area" style="margin-top: 15px;">
+            <h3>Wonder Pick</h3>
+            <p>Pegue 1 carta aleatória do pacote de um amigo!</p>
+            <button class="secondary" onclick="wonderPick()">Testar Sorte (Custo: 1 stamina)</button>
         </div>
     </div>
 
-    <div id="screen-battle">
-        <div class="status-bar" id="enemy-avatar">
-            <div>Inimigo (IA)</div>
-            <div>HP: <span id="enemy-hp">20</span> | Mana: <span id="enemy-mana">1/1</span></div>
-            <div>Deck: <span id="enemy-deck-count">25</span></div>
-        </div>
+    <div id="view-collection" class="view">
+        <h2>Sua Coleção</h2>
+        <p style="text-align:center; margin-bottom: 15px; font-size: 12px; color: #888;">Cartas únicas ou repetidas</p>
+        <div class="card-grid" id="collection-grid">
+            </div>
+    </div>
 
-        <div class="arena">
-            <div class="zone" id="enemy-hand" style="opacity: 0.5; pointer-events: none;"></div>
-            <div class="zone zone-field" id="enemy-field"></div>
-            
-            <div class="zone zone-field" id="player-field"></div>
-            <div class="zone" id="player-hand"></div>
-        </div>
+    <div id="view-deck" class="view">
+        <h2>Construtor de Deck</h2>
+        <p style="text-align: center;">Tamanho: <span id="deck-count">0</span> / 20</p>
+        <button onclick="autoFillDeck()" style="margin-top: 10px;">Preencher Deck Automaticamente</button>
+        <p style="font-size: 12px; color: #aaa; margin-top: 20px; text-align: center;">(Apenas 20 cartas permitidas para partidas rápidas. Energias são geradas automaticamente na zona de energia).</p>
+        <div class="card-grid" id="deck-grid" style="margin-top: 15px;">
+            </div>
+    </div>
 
-        <div class="turn-controls">
-            <div id="turn-indicator">Seu Turno</div>
-            <button class="btn" id="btn-end-turn" style="padding: 10px 20px; margin: 0; font-size: 1rem;" onclick="endTurn()">Fim de Turno</button>
-        </div>
-        <div class="status-bar player-avatar" id="player-avatar" style="border-top: 1px solid #333; margin-bottom: 0;">
-            <div>Você</div>
-            <div>HP: <span id="player-hp">20</span> | Mana: <span id="player-mana">1/1</span></div>
-            <div>Deck: <span id="player-deck-count">25</span></div>
+    <div id="view-play" class="view">
+        <h2>Quick Match (PvP Simulado)</h2>
+        <button onclick="alert('Buscando oponente na fila autoritativa do servidor...')">Buscar Partida</button>
+        <button class="secondary" onclick="alert('Auto-battle ativado para IA Solo.')">Solo Mode (vs AI)</button>
+        
+        <h3 style="margin-top: 30px; text-align: left; font-size: 14px;">Layout do Campo (V1)</h3>
+        <p style="font-size: 12px; color:#aaa;">Vitória: 3 Pontos (Derrote 3 monstros)</p>
+        <div class="battle-field">
+            <div class="active-spot">Active<br>Monster</div>
+            <div class="bench">
+                <div class="bench-spot">Bench 1</div>
+                <div class="bench-spot">Bench 2</div>
+                <div class="bench-spot">Bench 3</div>
+                <div class="bench-spot">Bench 4</div>
+                <div class="bench-spot">Bench 5</div>
+            </div>
         </div>
     </div>
 
-    <div id="message-overlay"><div id="message-text"></div></div>
+    <div id="view-shop" class="view">
+        <h2>Loja & Trocas</h2>
+        <div class="pack-area">
+            <h3>Premium Pass</h3>
+            <p>Desbloqueia 1 pacote extra por dia!</p>
+            <button class="secondary">Assinar ($9.99/mês)</button>
+        </div>
+        <div class="pack-area">
+            <h3>Troca de Pack Points</h3>
+            <p>Gaste pontos obtidos nos pacotes por cartas específicas.</p>
+            <button class="secondary" onclick="buyCardWithPoints()">Comprar Carta EX (500 pts)</button>
+        </div>
+    </div>
+
+    <nav>
+        <div class="nav-btn active" onclick="switchView('home', this)">Home</div>
+        <div class="nav-btn" onclick="switchView('collection', this)">Coleção</div>
+        <div class="nav-btn" onclick="switchView('deck', this)">Deck</div>
+        <div class="nav-btn" onclick="switchView('play', this)">Jogar</div>
+        <div class="nav-btn" onclick="switchView('shop', this)">Loja</div>
+    </nav>
+</div>
 
 <script>
-    // --- 1. BANCO DE DADOS DE CARTAS (JSON Format) ---
-    const cardDatabase = [
-        { id: "c001", name: "Recruta Aether", rarity: "common", cost: 1, type: "creature", attack: 2, health: 1, text: "", emoji: "🤺" },
-        { id: "c002", name: "Lobo Ígneo", rarity: "common", cost: 2, type: "creature", attack: 3, health: 2, text: "", emoji: "🐺" },
-        { id: "c003", name: "Guardião de Pedra", rarity: "rare", cost: 3, type: "creature", attack: 2, health: 5, text: "", emoji: "🪨" },
-        { id: "c004", name: "Arqueira dos Ventos", rarity: "common", cost: 3, type: "creature", attack: 4, health: 2, text: "", emoji: "🏹" },
-        { id: "c005", name: "Paladino D'água", rarity: "epic", cost: 4, type: "creature", attack: 4, health: 5, text: "", emoji: "🛡️" },
-        { id: "c006", name: "Colosso de Magma", rarity: "rare", cost: 5, type: "creature", attack: 6, health: 5, text: "", emoji: "🌋" },
-        { id: "c007", name: "Dragão Ancestral", rarity: "legendary", cost: 7, type: "creature", attack: 8, health: 8, text: "", emoji: "🐉" }
-    ];
-
-    // --- 2. ESTADO DO JOGO ---
-    let gameState = {
-        turn: 'player', // 'player' ou 'enemy'
-        phase: 'main',
-        selectedAttacker: null, // Índice da carta atacando no campo
-        player: { hp: 20, maxMana: 1, mana: 1, deck: [], hand: [], field: [] },
-        enemy: { hp: 20, maxMana: 1, mana: 1, deck: [], hand: [], field: [] }
+    // --- ESTADO GLOBAL DA APLICAÇÃO (Simulando Banco de Dados do Cliente) ---
+    const state = {
+        packPoints: 0,
+        collection: [],
+        deck: [],
+        nextPackTime: 0, // Timestamp
+        packCooldownHours: 12
     };
 
-    // --- 3. FUNÇÕES UTILITÁRIAS ---
-    function cloneCard(cardId) {
-        const base = cardDatabase.find(c => c.id === cardId);
-        // Retorna cópia profunda com propriedades de jogo (canAttack, currentHealth)
-        return { ...base, currentHealth: base.health, canAttack: false, uid: Math.random().toString(36).substr(2, 9) };
+    // --- BANCO DE DADOS DE CARTAS (Fake V1 IP-Safe) ---
+    const cardDatabase = [
+        { id: 1, name: "Aqua Turtle", type: "Water", hp: 60, rarity: "Comum" },
+        { id: 2, name: "Flame Lizard", type: "Fire", hp: 50, rarity: "Comum" },
+        { id: 3, name: "Leaf Bulb", type: "Grass", hp: 70, rarity: "Comum" },
+        { id: 4, name: "Thunder Mouse", type: "Electric", hp: 60, rarity: "Incomum" },
+        { id: 5, name: "Ghost Shade", type: "Psychic", hp: 80, rarity: "Incomum" },
+        { id: 6, name: "Dragon Roar", type: "Dragon", hp: 120, rarity: "Raro" },
+        { id: 7, name: "Ocean Leviathan EX", type: "Water", hp: 180, rarity: "EX" },
+        { id: 8, name: "Inferno Bird EX", type: "Fire", hp: 170, rarity: "EX" },
+        { id: 9, name: "Prof. Oak Tree", type: "Supporter", effect: "Compre 2 cartas.", rarity: "Raro" },
+        { id: 10, name: "Healing Potion", type: "Item", effect: "Cure 20 HP.", rarity: "Comum" }
+    ];
+
+    // --- LÓGICA DE NAVEGAÇÃO ---
+    function switchView(viewId, element) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById('view-' + viewId).classList.add('active');
+        element.classList.add('active');
+        if(viewId === 'collection') renderCollection();
     }
 
-    function shuffle(array) {
-        for (let i = array.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [array[i], array[j]] = [array[j], array[i]];
-        }
-        return array;
-    }
+    // --- LÓGICA DE TEMPORIZADOR DE PACOTES (12 HORAS) ---
+    function updateTimer() {
+        const now = new Date().getTime();
+        const btn = document.getElementById('btn-open-pack');
+        const timerDisplay = document.getElementById('pack-timer');
 
-    function showMessage(msg) {
-        const el = document.getElementById('message-text');
-        el.innerText = msg;
-        el.style.opacity = 1;
-        setTimeout(() => el.style.opacity = 0, 1500);
-    }
-
-    // --- 4. FLUXO DO JOGO ---
-    function startGame() {
-        document.getElementById('screen-home').style.display = 'none';
-        document.getElementById('screen-battle').style.display = 'flex';
-        
-        // Gerar Decks (30 cartas aleatórias do DB para o MVP)
-        gameState.player.deck = Array.from({length: 30}, () => cloneCard(cardDatabase[Math.floor(Math.random() * cardDatabase.length)].id));
-        gameState.enemy.deck = Array.from({length: 30}, () => cloneCard(cardDatabase[Math.floor(Math.random() * cardDatabase.length)].id));
-        
-        // Comprar mãos iniciais (5 cartas)
-        for(let i=0; i<5; i++) {
-            gameState.player.hand.push(gameState.player.deck.pop());
-            gameState.enemy.hand.push(gameState.enemy.deck.pop());
-        }
-        
-        updateUI();
-        showMessage("Partida Iniciada!");
-    }
-
-    function startTurn() {
-        const active = gameState[gameState.turn];
-        
-        // Aumentar e refilar Mana (Máx 10)
-        if (active.maxMana < 10) active.maxMana++;
-        active.mana = active.maxMana;
-        
-        // Comprar carta
-        if (active.deck.length > 0 && active.hand.length < 10) {
-            active.hand.push(active.deck.pop());
-        } else if (active.deck.length === 0) {
-            active.hp -= 1; // Dano de fadiga simples
-        }
-
-        // Resetar ataques das criaturas no campo
-        active.field.forEach(card => card.canAttack = true);
-        
-        gameState.selectedAttacker = null;
-        updateUI();
-
-        if (gameState.turn === 'enemy') {
-            document.getElementById('turn-indicator').innerText = "Turno Inimigo";
-            document.getElementById('turn-indicator').style.color = "#ff5252";
-            document.getElementById('btn-end-turn').disabled = true;
-            setTimeout(playAITurn, 1000);
+        if (now >= state.nextPackTime) {
+            timerDisplay.innerText = "PRONTO!";
+            timerDisplay.style.color = "#0f0";
+            btn.disabled = false;
         } else {
-            document.getElementById('turn-indicator').innerText = "Seu Turno";
-            document.getElementById('turn-indicator').style.color = "var(--accent)";
-            document.getElementById('btn-end-turn').disabled = false;
-            showMessage("Seu Turno!");
-        }
-    }
-
-    function endTurn() {
-        if (gameState.turn !== 'player') return;
-        gameState.turn = 'enemy';
-        startTurn();
-    }
-
-    // --- 5. INTERAÇÕES DO JOGADOR ---
-    
-    // Jogar carta da mão
-    function playCard(index) {
-        if (gameState.turn !== 'player') return;
-        const card = gameState.player.hand[index];
-        
-        if (gameState.player.mana >= card.cost) {
-            if (gameState.player.field.length >= 5) {
-                showMessage("Campo cheio!");
-                return;
-            }
-            gameState.player.mana -= card.cost;
-            gameState.player.field.push(card);
-            gameState.player.hand.splice(index, 1);
-            updateUI();
-        } else {
-            showMessage("Mana insuficiente!");
-        }
-    }
-
-    // Selecionar criatura no campo para atacar
-    function handleFieldClick(index, owner) {
-        if (gameState.turn !== 'player') return;
-
-        // Se clicou na própria criatura
-        if (owner === 'player') {
-            const card = gameState.player.field[index];
-            if (!card.canAttack) {
-                showMessage("Não pode atacar!");
-                return;
-            }
-            // Toggle seleção
-            gameState.selectedAttacker = gameState.selectedAttacker === index ? null : index;
-            updateUI();
-        } 
-        // Se clicou na criatura inimiga (alvo)
-        else if (owner === 'enemy' && gameState.selectedAttacker !== null) {
-            resolveCombat(gameState.selectedAttacker, index, 'creature');
-        }
-    }
-
-    // Clicar no avatar inimigo (alvo)
-    document.getElementById('enemy-avatar').addEventListener('click', () => {
-        if (gameState.turn === 'player' && gameState.selectedAttacker !== null) {
-            resolveCombat(gameState.selectedAttacker, null, 'face');
-        }
-    });
-
-    // Resolver dano
-    function resolveCombat(attackerIdx, targetIdx, targetType) {
-        const attacker = gameState.player.field[attackerIdx];
-        attacker.canAttack = false;
-        gameState.selectedAttacker = null;
-
-        if (targetType === 'face') {
-            gameState.enemy.hp -= attacker.attack;
-            showMessage(`Dano: ${attacker.attack}`);
-        } else if (targetType === 'creature') {
-            const defender = gameState.enemy.field[targetIdx];
-            defender.currentHealth -= attacker.attack;
-            attacker.currentHealth -= defender.attack; // Retaliação
+            const distance = state.nextPackTime - now;
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((distance % (1000 * 60)) / 1000);
             
-            // Checar mortes
-            if (defender.currentHealth <= 0) gameState.enemy.field.splice(targetIdx, 1);
-            if (attacker.currentHealth <= 0) gameState.player.field.splice(attackerIdx, 1);
+            timerDisplay.innerText = 
+                String(hours).padStart(2, '0') + ":" + 
+                String(minutes).padStart(2, '0') + ":" + 
+                String(seconds).padStart(2, '0');
+            timerDisplay.style.color = "var(--accent)";
+            btn.disabled = true;
         }
+    }
+    setInterval(updateTimer, 1000);
+
+    // --- LÓGICA DE ABERTURA DE PACOTES (EXATAMENTE 5 CARTAS) ---
+    function openPack() {
+        alert("Animação de Unboxing tocando... Revelando 5 cartas!");
         
-        checkWinCondition();
-        updateUI();
-    }
+        let pulledCards = [];
+        for(let i = 0; i < 5; i++) {
+            // Odds simplificadas: 70% Comum, 20% Incomum, 8% Rara, 2% EX
+            let roll = Math.random() * 100;
+            let filterRarity = "Comum";
+            if(roll > 70) filterRarity = "Incomum";
+            if(roll > 90) filterRarity = "Raro";
+            if(roll > 98) filterRarity = "EX";
 
-    function checkWinCondition() {
-        if (gameState.enemy.hp <= 0) {
-            setTimeout(() => { alert("VITÓRIA! Você derrotou a IA."); location.reload(); }, 500);
-        } else if (gameState.player.hp <= 0) {
-            setTimeout(() => { alert("DERROTA! O seu herói caiu."); location.reload(); }, 500);
+            const pool = cardDatabase.filter(c => c.rarity === filterRarity);
+            const card = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : cardDatabase[0];
+            pulledCards.push(card);
+            state.collection.push(card);
         }
-    }
 
-    // --- 6. INTELIGÊNCIA ARTIFICIAL BÁSICA ---
-    async function playAITurn() {
-        const ai = gameState.enemy;
+        let resultText = pulledCards.map(c => `- ${c.name} (${c.rarity})`).join("\n");
+        alert("Você tirou:\n" + resultText);
+
+        // Reseta o timer para 12 horas no futuro
+        state.nextPackTime = new Date().getTime() + (state.packCooldownHours * 60 * 60 * 1000);
         
-        // Fase 1: Jogar cartas (da mais cara para a mais barata)
-        let canPlay = true;
-        while (canPlay && ai.field.length < 5) {
-            let playableCards = ai.hand.map((c, i) => ({card: c, idx: i})).filter(c => c.card.cost <= ai.mana);
-            if (playableCards.length > 0) {
-                // Escolhe a de maior custo
-                playableCards.sort((a, b) => b.card.cost - a.card.cost);
-                let toPlay = playableCards[0];
-                
-                ai.mana -= toPlay.card.cost;
-                ai.field.push(toPlay.card);
-                ai.hand.splice(toPlay.idx, 1);
-                updateUI();
-                await new Promise(r => setTimeout(r, 800)); // Delay para visualização
-            } else {
-                canPlay = false;
-            }
-        }
-
-        // Fase 2: Atacar (se tiver cartas prontas)
-        for (let i = ai.field.length - 1; i >= 0; i--) {
-            let attacker = ai.field[i];
-            if (attacker && attacker.canAttack) {
-                attacker.canAttack = false;
-                
-                // IA burra: 50% chance de atacar uma criatura aleatória, 50% de atacar direto
-                if (gameState.player.field.length > 0 && Math.random() > 0.5) {
-                    let targetIdx = Math.floor(Math.random() * gameState.player.field.length);
-                    let defender = gameState.player.field[targetIdx];
-                    
-                    defender.currentHealth -= attacker.attack;
-                    attacker.currentHealth -= defender.attack;
-                    
-                    if (defender.currentHealth <= 0) gameState.player.field.splice(targetIdx, 1);
-                    if (attacker.currentHealth <= 0) ai.field.splice(i, 1);
-                } else {
-                    gameState.player.hp -= attacker.attack;
-                }
-                updateUI();
-                checkWinCondition();
-                await new Promise(r => setTimeout(r, 800));
-            }
-        }
-
-        gameState.turn = 'player';
-        startTurn();
+        // Adiciona Pack Points (5 por pacote)
+        state.packPoints += 5;
+        document.getElementById('pack-points').innerText = state.packPoints;
+        
+        updateTimer();
     }
 
-    // --- 7. RENDERIZAÇÃO DA UI (DOM Manipulation) ---
-    function renderCardHTML(card, isHidden = false, interactiveClass = "") {
-        if (isHidden) {
-            return `<div class="card" style="background: repeating-linear-gradient(45deg, #16213e, #16213e 10px, #0f3460 10px, #0f3460 20px);"></div>`;
+    // --- ITENS DE REDUÇÃO (Hourglass) ---
+    function useHourglass() {
+        if(state.nextPackTime > new Date().getTime()) {
+            state.nextPackTime -= (1 * 60 * 60 * 1000); // Tira 1 hora
+            alert("Você usou um Pack Hourglass. Tempo reduzido em 1 hora!");
+            updateTimer();
+        } else {
+            alert("O pacote já está pronto para ser aberto!");
         }
-        return `
-            <div class="card rarity-${card.rarity} ${interactiveClass}">
-                <div class="card-cost">${card.cost}</div>
+    }
+
+    // --- WONDER PICK (V1 Mechanic) ---
+    function wonderPick() {
+        alert("Procurando um pacote aberto por outro jogador no servidor...");
+        const randomCard = cardDatabase[Math.floor(Math.random() * cardDatabase.length)];
+        alert("Você selecionou: " + randomCard.name + "!\n(Adicionado à coleção).");
+        state.collection.push(randomCard);
+    }
+
+    // --- RENDERIZAÇÃO DA UI (Coleção e Cartas) ---
+    function renderCollection() {
+        const grid = document.getElementById('collection-grid');
+        grid.innerHTML = '';
+        state.collection.forEach(card => {
+            const div = document.createElement('div');
+            div.className = `card ${card.rarity}`;
+            div.innerHTML = `
                 <div class="card-name">${card.name}</div>
-                <div class="card-img">${card.emoji}</div>
-                <div class="card-stats">
-                    <span class="stat-atk">⚔️${card.attack}</span>
-                    <span class="stat-hp">❤️${card.currentHealth}</span>
-                </div>
-            </div>`;
+                <div class="card-stats">${card.type || 'Trainer'} <br> ${card.hp ? 'HP ' + card.hp : ''}</div>
+                <div style="font-size:10px; color:#aaa;">${card.rarity}</div>
+            `;
+            grid.appendChild(div);
+        });
     }
 
-    function updateUI() {
-        // Status Top/Bottom
-        document.getElementById('player-hp').innerText = gameState.player.hp;
-        document.getElementById('player-mana').innerText = `${gameState.player.mana}/${gameState.player.maxMana}`;
-        document.getElementById('player-deck-count').innerText = gameState.player.deck.length;
-
-        document.getElementById('enemy-hp').innerText = gameState.enemy.hp;
-        document.getElementById('enemy-mana').innerText = `${gameState.enemy.mana}/${gameState.enemy.maxMana}`;
-        document.getElementById('enemy-deck-count').innerText = gameState.enemy.deck.length;
-
-        // Render Mão Inimiga (Cartas Viradas)
-        const enemyHandDiv = document.getElementById('enemy-hand');
-        enemyHandDiv.innerHTML = gameState.enemy.hand.map(() => renderCardHTML(null, true)).join('');
-
-        // Render Campo Inimigo
-        const enemyFieldDiv = document.getElementById('enemy-field');
-        const isTargeting = gameState.turn === 'player' && gameState.selectedAttacker !== null;
-        enemyFieldDiv.innerHTML = gameState.enemy.field.map((c, i) => 
-            `<div onclick="handleFieldClick(${i}, 'enemy')">` + 
-            renderCardHTML(c, false, isTargeting ? "targetable" : "") + 
-            `</div>`
-        ).join('');
-
-        // Highlight Avatar inimigo se estiver mirando
-        const enemyAvatar = document.getElementById('enemy-avatar');
-        if (isTargeting) enemyAvatar.classList.add('targetable');
-        else enemyAvatar.classList.remove('targetable');
-
-        // Render Campo do Jogador
-        const playerFieldDiv = document.getElementById('player-field');
-        playerFieldDiv.innerHTML = gameState.player.field.map((c, i) => {
-            let classes = "";
-            if (gameState.turn === 'player' && c.canAttack) classes += "can-attack ";
-            if (gameState.selectedAttacker === i) classes += "selected ";
-            return `<div onclick="handleFieldClick(${i}, 'player')">${renderCardHTML(c, false, classes.trim())}</div>`;
-        }).join('');
-
-        // Render Mão do Jogador
-        const playerHandDiv = document.getElementById('player-hand');
-        playerHandDiv.innerHTML = gameState.player.hand.map((c, i) => {
-            let classes = "";
-            if (gameState.turn === 'player' && gameState.player.mana >= c.cost) classes = "can-play";
-            return `<div onclick="playCard(${i})">${renderCardHTML(c, false, classes)}</div>`;
-        }).join('');
+    // --- CONSTRUTOR DE DECK (Exatamente 20 Cartas) ---
+    function autoFillDeck() {
+        if(state.collection.length < 20) {
+            alert("Você precisa de pelo menos 20 cartas na coleção para montar um deck válido!");
+            return;
+        }
+        state.deck = state.collection.slice(0, 20); // Pega as primeiras 20 para testar
+        document.getElementById('deck-count').innerText = state.deck.length;
+        
+        const grid = document.getElementById('deck-grid');
+        grid.innerHTML = '';
+        state.deck.forEach(card => {
+            const div = document.createElement('div');
+            div.className = `card ${card.rarity}`;
+            div.innerHTML = `<div class="card-name">${card.name}</div>`;
+            grid.appendChild(div);
+        });
+        alert("Deck preenchido! Regra aplicada: Não há cartas de Energia (Energy Zone substitui).");
     }
 
+    // --- LOJA / ECONOMIA ---
+    function buyCardWithPoints() {
+        if(state.packPoints >= 500) {
+            state.packPoints -= 500;
+            document.getElementById('pack-points').innerText = state.packPoints;
+            const exCard = cardDatabase.find(c => c.rarity === "EX");
+            state.collection.push(exCard);
+            alert(`Sucesso! Você trocou pontos por ${exCard.name}.`);
+        } else {
+            alert("Pack Points insuficientes. Continue abrindo pacotes!");
+        }
+    }
+
+    // Inicialização do Jogo
+    window.onload = () => {
+        // Inicia com o timer pronto no primeiro login
+        state.nextPackTime = new Date().getTime() - 1000;
+        updateTimer();
+    };
 </script>
+
 </body>
 </html>
