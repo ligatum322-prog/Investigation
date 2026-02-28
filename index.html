@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investigação Noir: O Caso da Estação</title>
+    <style>
+        /* Estilo Retro Terminal / ASCII */
+        :root {
+            --bg-color: #0c0c0c;
+            --text-color: #33ff33;
+            --accent-color: #1a8c1a;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: "Courier New", Courier, monospace;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            border: 2px solid var(--text-color);
+            padding: 20px;
+            box-sizing: border-box;
+            box-shadow: 0 0 10px var(--accent-color);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            border-bottom: 1px dashed var(--text-color);
+            padding-bottom: 10px;
+        }
+
+        #main-display {
+            min-height: 250px;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            font-size: 16px;
+        }
+
+        .ascii-art {
+            text-align: center;
+            font-size: 14px;
+            line-height: 1.2;
+            margin-bottom: 15px;
+        }
+
+        #panels {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            border-top: 1px dashed var(--text-color);
+            padding-top: 15px;
+        }
+
+        @media (max-width: 600px) {
+            #panels { grid-template-columns: 1fr; }
+        }
+
+        #actions-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .action-btn {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--text-color);
+            padding: 10px;
+            font-family: inherit;
+            font-size: 16px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: var(--text-color);
+            color: var(--bg-color);
+        }
+
+        #inventory-panel {
+            border-left: 1px dashed var(--text-color);
+            padding-left: 20px;
+        }
+
+        @media (max-width: 600px) {
+            #inventory-panel { border-left: none; padding-left: 0; border-top: 1px dashed var(--text-color); padding-top: 15px;}
+        }
+
+        .feedback {
+            color: #ffff00;
+            font-style: italic;
+            margin-bottom: 15px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <header>
+        <h1 style="margin:0; font-size: 20px;">INVESTIGAÇÃO NOIR</h1>
+        <small>Detetive Álvaro - Arquivo #402</small>
+    </header>
+
+    <div>
+        <span id="feedback-msg" class="feedback"></span>
+        <div id="main-display"></div>
+    </div>
+
+    <div id="panels">
+        <div id="actions-panel">
+            </div>
+        <div id="inventory-panel">
+            <h3>INVENTÁRIO (<span id="inv-count">0</span>/4)</h3>
+            <ul id="inventory-list" style="list-style-type: square; padding-left: 20px;">
+                </ul>
+        </div>
+    </div>
+</div>
+
+<script>
+    /**
+     * ESTADO DO JOGO (Game State)
+     * Mantém o rastreio da localização, inventário e flags de progressão.
+     */
+    const gameState = {
+        currentLocation: 'start',
+        inventory: [],
+        maxInventory: 4,
+        flags: {
+            bodyExamined: false,
+            spokeToGuard: false,
+            spokeToZe: false,
+            knowsAboutMustache: false
+        }
+    };
+
+    /**
+     * BANCO DE DADOS DE CENAS (Locations & Scenes)
+     * Define o texto e as opções disponíveis para cada estado.
+     */
+    const scenes = {
+        start: {
+            text: `<div class="ascii-art">
+   .  * .  ~  chuva  ~  .  * ___|___ 
+ |       |  A cidade nunca dorme, e os mortos também não.
+ | O   O |  Sou o Detetive Álvaro.
+ |   ^   |  
+ |  ---  |  Mais um corpo. Desta vez na estação central.
+ |_______|  
+            </div>\nO corpo de Mariana Costa esfria no banco da plataforma. Preciso descobrir o que aconteceu antes que a polícia corrupta chegue.`,
+            actions: [
+                { label: "1. Começar a Investigação (Ir para Plataforma)", target: 'plataforma' }
+            ]
+        },
+        plataforma: {
+            text: `[ PLATAFORMA DA ESTAÇÃO ]\nA chuva cai fraca. O corpo da vítima está caído sobre um banco de madeira. O local está deserto, exceto pela bilheteria ao longe.`,
+            actions: [
+                { label: "1. OLHAR CORPO", action: () => examineBody() },
+                { label: "2. IR PARA BILHETERIA", target: 'bilheteria' },
+                { label: "3. IR PARA BAR DO ZÉ", target: 'bar' },
+                { label: "4. AVALIAR PISTAS (Concluir)", target: 'decisao_final', condition: () => canFinishGame() }
+            ]
+        },
+        bilheteria: {
+            text: `[ BILHETERIA / GUARDA VOLUME ]\nUm guarda sonolento lê um jornal velho dentro da cabine.`,
+            actions: [
+                { label: "1. FALAR GUARDA", action: () => speakToGuard() },
+                { label: "2. VOLTAR PARA PLATAFORMA", target: 'plataforma' }
+            ]
+        },
+        bar: {
+            text: `[ BAR DO ZÉ ]\nUm buraco escuro e com cheiro de mofo. Joaquim 'Zé' Prado, o dono, limpa o balcão com um pano sujo.`,
+            actions: [
+                { label: "1. FALAR ZÉ", action: () => speakToZe() },
+                { label: "2. INSPECIONAR LIXO", action: () => getTrash() },
+                { label: "3. VER CINZEIRO", action: () => getAshtray() },
+                { label: "4. VOLTAR PARA PLATAFORMA", target: 'plataforma' }
+            ]
+        },
+        decisao_final: {
+            text: `[ CONCLUSÃO DO CASO ]\nVocê reuniu as pistas. O recibo reconstruído mostra uma dívida de jogo. O cigarro tem a marca de um bigode. A testemunha viu Zé sair da plataforma.\nChegou a hora de decidir.`,
+            actions: [
+                { label: "1. ACUSAR ZÉ (Justiça)", target: 'final_justica' },
+                { label: "2. ACUSAR O GUARDA (Acusação Errada)", target: 'final_erro' },
+                { label: "3. CHANTAGEAR ZÉ (Corrupção)", target: 'final_corrupcao' },
+                { label: "4. REVELAR ESQUEMA DO PREFEITO (Conspiração)", target: 'final_conspiracao', condition: () => hasItem("Caderno") }
+            ]
+        },
+        final_justica: {
+            text: `[ FINAL 1: JUSTIÇA FÁCIL ]\nVocê algema Zé. Ele confessa que Mariana devia dinheiro ao sindicato e ele foi cobrar. A chuva lava a plataforma, mas não a alma da cidade. \n\nCASO ENCERRADO.`,
+            actions: [{ label: "JOGAR NOVAMENTE", action: () => resetGame() }]
+        },
+        final_erro: {
+            text: `[ FINAL 2: BODE EXPIATÓRIO ]\nVocê prende o guarda. Ele chora jurando inocência. Zé sorri de longe. A delegacia precisa de um culpado, não da verdade.\n\nCASO ENCERRADO (COM FALHAS).`,
+            actions: [{ label: "JOGAR NOVAMENTE", action: () => resetGame() }]
+        },
+        final_corrupcao: {
+            text: `[ FINAL 3: DINHEIRO SUJO ]\nVocê mostra as pistas para Zé. "Quanto você quer?", ele pergunta. Você sai com os bolsos cheios. Mariana nunca terá justiça.\n\nCASO ENCERRADO (VENDIDO).`,
+            actions: [{ label: "JOGAR NOVAMENTE", action: () => resetGame() }]
+        },
+        final_conspiracao: {
+            text: `[ FINAL 4: ALVO NAS COSTAS ]\nO caderno revela que Zé cobrava propina para o Prefeito. Você envia tudo para os jornais. Agora você é um homem morto andando. O sistema está podre.\n\nCASO ENCERRADO (CONSPIRAÇÃO).`,
+            actions: [{ label: "JOGAR NOVAMENTE", action: () => resetGame() }]
+        }
+    };
+
+    /**
+     * FUNÇÕES DE AÇÃO E LÓGICA (Handlers)
+     */
+    function showFeedback(msg) {
+        const fb = document.getElementById('feedback-msg');
+        fb.innerText = msg;
+        setTimeout(() => { fb.innerText = ''; }, 3000);
+    }
+
+    function hasItem(itemName) {
+        return gameState.inventory.includes(itemName);
+    }
+
+    function addToInventory(item) {
+        if (hasItem(item)) return false;
+        if (gameState.inventory.length >= gameState.maxInventory) {
+            showFeedback("Inventário cheio! (Máx 4 itens)");
+            return false;
+        }
+        gameState.inventory.push(item);
+        showFeedback(`*clic* Você pegou: ${item}`);
+        return true;
+    }
+
+    // Ações Específicas
+    function examineBody() {
+        if (!gameState.flags.bodyExamined) {
+            gameState.flags.bodyExamined = true;
+            let gotNotebook = addToInventory("Caderno");
+            let gotReceipt1 = addToInventory("Recibo_Parte1");
+            if(gotNotebook && gotReceipt1) {
+                showFeedback("Você inspeciona o corpo. Pegou 'Caderno' e 'Recibo_Parte1' do bolso.");
+            }
+        } else {
+            showFeedback("Não há mais nada útil no corpo de Mariana.");
+        }
+        renderScene();
+    }
+
+    function speakToGuard() {
+        gameState.flags.spokeToGuard = true;
+        gameState.flags.knowsAboutMustache = true;
+        showFeedback(`GUARDA: "Não vi nada... só um cara de bigode indo pro bar." (Testemunho anotado)`);
+        renderScene();
+    }
+
+    function speakToZe() {
+        if (gameState.flags.knowsAboutMustache) {
+            showFeedback(`ZÉ (suando): "Bigode? Metade da cidade tem bigode, detetive!"`);
+        } else {
+            showFeedback(`ZÉ: "A Mariana devia pra muita gente ruim, detetive."`);
+        }
+        gameState.flags.spokeToZe = true;
+        renderScene();
+    }
+
+    function getTrash() {
+        if (!hasItem("Recibo_Parte2") && !hasItem("Recibo_Completo")) {
+            if(addToInventory("Recibo_Parte2")) {
+                showFeedback("Você vasculhou o lixo. Achou 'Recibo_Parte2'.");
+            }
+        } else {
+            showFeedback("Apenas lixo sem importância agora.");
+        }
+        renderScene();
+    }
+
+    function getAshtray() {
+        if (!hasItem("Cigarro")) {
+            if(addToInventory("Cigarro")) {
+                showFeedback("Achou uma bituca de 'Cigarro'. Tem marca de cera de bigode!");
+            }
+        } else {
+            showFeedback("Cinzeiro vazio.");
+        }
+        renderScene();
+    }
+
+    function joinReceipts() {
+        if (hasItem("Recibo_Parte1") && hasItem("Recibo_Parte2")) {
+            gameState.inventory = gameState.inventory.filter(i => i !== "Recibo_Parte1" && i !== "Recibo_Parte2");
+            gameState.inventory.push("Recibo_Completo");
+            showFeedback("Você uniu as partes! 'Recibo_Completo' mostra uma dívida alta com o Zé.");
+            renderScene();
+        }
+    }
+
+    function canFinishGame() {
+        return hasItem("Recibo_Completo") && hasItem("Cigarro") && gameState.flags.spokeToGuard;
+    }
+
+    function resetGame() {
+        gameState.currentLocation = 'start';
+        gameState.inventory = [];
+        gameState.flags = { bodyExamined: false, spokeToGuard: false, spokeToZe: false, knowsAboutMustache: false };
+        renderScene();
+    }
+
+    /**
+     * MOTOR DE RENDERIZAÇÃO (View)
+     */
+    function renderScene() {
+        const scene = scenes[gameState.currentLocation];
+        const display = document.getElementById('main-display');
+        const actionsPanel = document.getElementById('actions-panel');
+        const invList = document.getElementById('inventory-list');
+        const invCount = document.getElementById('inv-count');
+
+        // Render Texto
+        display.innerHTML = scene.text;
+
+        // Render Botões
+        actionsPanel.innerHTML = '';
+        scene.actions.forEach(action => {
+            // Verifica condição de visibilidade
+            if (action.condition && !action.condition()) return;
+
+            const btn = document.createElement('button');
+            btn.className = 'action-btn';
+            btn.innerText = action.label;
+            btn.onclick = () => {
+                if (action.action) action.action();
+                if (action.target) {
+                    gameState.currentLocation = action.target;
+                    renderScene();
+                }
+            };
+            actionsPanel.appendChild(btn);
+        });
+
+        // Adiciona ação extra global se tiver partes do recibo
+        if (hasItem("Recibo_Parte1") && hasItem("Recibo_Parte2")) {
+            const btnJoin = document.createElement('button');
+            btnJoin.className = 'action-btn';
+            btnJoin.innerText = "-> UNIR RECIBO 1 + RECIBO 2";
+            btnJoin.style.borderColor = "yellow";
+            btnJoin.onclick = () => joinReceipts();
+            actionsPanel.appendChild(btnJoin);
+        }
+
+        // Render Inventário
+        invList.innerHTML = '';
+        gameState.inventory.forEach(item => {
+            const li = document.createElement('li');
+            li.innerText = `[${item}]`;
+            invList.appendChild(li);
+        });
+        invCount.innerText = gameState.inventory.length;
+    }
+
+    // Inicializa o jogo
+    window.onload = renderScene;
+
+    // Suporte a teclado (1, 2, 3, 4...)
+    window.addEventListener('keydown', (e) => {
+        const key = parseInt(e.key);
+        if (!isNaN(key) && key > 0) {
+            const buttons = document.querySelectorAll('.action-btn');
+            if (key <= buttons.length) {
+                buttons[key - 1].click();
+            }
+        }
+    });
+</script>
+</body>
+</html>
